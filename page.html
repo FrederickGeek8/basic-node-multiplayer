@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <style type="text/css">
+        body { padding:50px; background:white;}
+        #c { border:1px solid grey; _border-radius:10px; margin-bottom:30px;}
+    </style>
+    <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript">
+
+        window.onload = function() {
+            var img = new Image();
+            img.src = "/814zkcBpsKL.jpg";
+
+            img.onload = function() {
+                var sprite = new Image();
+                sprite.src = "/sprite.jpg";
+
+                sprite.onload = function() {
+                    console.log("img loaded");
+
+                    var welcome = document.getElementById("welcome");
+                    var allUsers = document.getElementById("users");
+                    var progress = document.getElementById("progress");
+                    var results = document.getElementById("results");
+                    var canvas = document.getElementById('c');
+                    var ctx = canvas.getContext("2d");
+
+
+
+                    var tile_size = 0;
+                    // current x, y
+                    var cx = 0,
+                    cy = 0;
+
+                    var socket = io.connect('http://localhost:3250');
+                    socket.on('welcome', function (data) {
+                        tile_size = data.tile;
+                        cx = data.x;
+                        cy = data.y;
+                        ctx.drawImage(sprite, data.x, data.y, data.tile, data.tile);
+                    });
+                    socket.on('users', function (data) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.textAlign = 'center';
+                        console.log(data.spent);
+                        ctx.fillStyle = ctx.createPattern(img, "no-repeat");
+                        for(var i=0; i<data.spent.x.length; i++) {
+                            var coordx = data.spent.x[i];
+                            var coordy = data.spent.y[i];
+                            ctx.fillRect(coordx, coordy, tile_size, tile_size);
+                        }
+
+                        for(var i=0; i<data.users.length; i++) {
+                            var usr = data.users[i];
+                            ctx.fillStyle = "#000";
+                            ctx.fillText(usr.name,usr.x,usr.y-10);
+                            ctx.drawImage(sprite, usr.x, usr.y, tile_size, tile_size);
+                        }
+                    });
+                    socket.on('update', function (data) {
+                        progress.innerHTML = data.currentWidth;
+                        progress.style.width = parseInt(data.currentWidth) + "px";
+                    });
+                    socket.on('win', function (data) {
+                        results.innerHTML = data.message;
+                    });
+
+                    $(document).bind("keydown", function(e){
+
+                        switch(e.keyCode)
+                        {
+                            //left
+                            case 37:
+                                if(cx-1 >= 0) {
+                                    cx -= tile_size;
+                                    socket.emit("position", {x: cx, y: cy});
+                                }
+                            break;
+
+                            //up
+                            case 38:
+                                if(cy-1 >= 0) {
+                                    cy -= tile_size;
+                                    socket.emit("position", {x: cx, y: cy});
+                                }
+                            break;
+
+                            //right
+                            case 39:
+                                if(cx+1+tile_size <= 500) {
+                                    cx += tile_size;
+                                    socket.emit("position", {x: cx, y: cy});
+                                }
+                            break;
+
+                            //down
+                            case 40:
+                                if(cy+1+tile_size <= 500) {
+                                    cy += tile_size;
+                                    socket.emit("position", {x: cx, y: cy});
+                                }
+                            break;
+                        }
+
+                        $("#coords").text("cx: " + cx + ", cy: " + cy);
+                    });
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <canvas id="c" width="500" height="500"></canvas>
+    <div id="coords">Use arrow keys to move</div>
+    <p id="mmoo">Loading unstoppable music...</p>
+    <iframe src="http://tane.us/ac/nl.html" style="display:none;" id="annoyingmusic"></iframe>
+    <script type="text/javascript">
+        $(function() {
+            $('#annoyingmusic').load(function() {
+                $('#mmoo').hide();
+            });
+        });
+    </script>
+</body>
+</html>
